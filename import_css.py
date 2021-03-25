@@ -1,6 +1,7 @@
 import re
 import time
 
+import cv2
 from PIL import Image, ImageDraw, ImageFont
 
 SCREEN_SIZE_X = 2560
@@ -34,9 +35,7 @@ def standardise_cords(list, cord):
 standardise_cords(split_list, 'left')
 standardise_cords(split_list, 'top')
 delegate_list = split_list[:57]
-print(delegate_list)
 replacement_list = split_list[57:]
-print(replacement_list)
 list_list = [delegate_list, replacement_list]
 open('output.css', 'w').close()
 
@@ -49,17 +48,25 @@ def set_space(unsorted_list, width_space, height_space):
     end_list = []
     for y in sorted_list:
         for x in sorted_list:
+            ### Bug testing
+            # draw.rectangle((x['left'], x['top'], x['left'] + x['width'], x['top'] + x['height']), fill=(0, 192, 192), outline=(255, 255, 255))
+            # draw.text((x['left'] + 10, x['top']), str(x['id']), font=ImageFont.truetype("Montserrat-Black", 36), fill=(0,0,0))
             if x['id'] == y['id']:
                 continue
-            if (y['top'] - y['height'] - y['height'] / 5 <= x['top'] <= y['top'] + y['height'] / 5) and x['top'] != y['top']:
+            if (y['top'] - y['height'] * 0.4 <= x['top'] <= y['top'] + y['height'] * 0.4) and x['top'] != y['top']:
                 x['top'] = y['top']
-            if (y['left'] - y['width'] - y['width'] / 5 <= x['left'] <= y['left'] + y['width'] / 5) and x['left'] != y['left']:
+            if (y['left'] - y['width'] * 0.2 <= x['left'] <= y['left'] + y['width'] * 0.2) and x['left'] != y['left']:
                 x['left'] = y['left']
-            if (y['left'] - y['width'] / 2 <= x['left'] <= y['left'] + y['width'] / 2 + y['width']) and x['top'] == y['top']:
+            if (y['left'] - y['width'] * 0.5 <= x['left'] <= y['left'] + y['width'] * 0.5 + y['width']) and x['top'] == y['top']:
                 x['left'] = y['left'] + y['width'] + width_space
             if y['top'] + y['height'] - y['height'] / 5 <= x['top'] <= y['top'] + y['height'] + y['height'] * 0.8 and x['left'] == y['left']:
                 x['top'] = y['top'] + y['height'] + height_space
         end_list.append(y.copy())
+        ### Bug testing
+        # im.save('pillow_imagedraw.jpg', quality=95)
+        # opencv_image = cv2.imread("pillow_imagedraw.jpg")
+        # cv2.imshow('image', opencv_image)
+        # cv2.waitKey(1)
     return end_list
 
 
@@ -75,8 +82,6 @@ top = min(spaced_replacement + spaced_delegate, key=lambda x: x['top'])
 left = min(spaced_replacement + spaced_delegate, key=lambda x: x['left'])
 move_x = round((SCREEN_SIZE_X - ((right['left'] + right['width']) - left['left'])) / 2)
 move_y = round((SCREEN_SIZE_Y - ((bottom['top'] + right['height']) - top['top'])) / 2)
-print(
-    f"bottom: {bottom['top']}\ntop: {top['top']}\nleft: {left['left']}\nright: {right['left']}\n{move_x=}\n{move_y=}\n")
 
 for wow in spaced_replacement + spaced_delegate:
     left_2 = wow['left'] + move_x - left['left']
