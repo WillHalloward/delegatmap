@@ -3,6 +3,9 @@ import time
 
 from PIL import Image, ImageDraw, ImageFont
 
+SCREEN_SIZE_X = 2560
+SCREEN_SIZE_Y = 1440
+
 file = open('input.css', 'r').read()
 list_file = file.split('\n')
 divided_list = []
@@ -18,51 +21,28 @@ for lines in list_file:
 
 split_list = sorted(divided_list, key=lambda i: (i['id']))
 
-left_points = []
-top_points = []
 
-# def standardise_cords(list, cord):
-#     temp_list_2 = []
-#     for x in list:
-#         for y in range(cord - 10, cord + 10):
-#             if y in left_points:
-#                 cord = y
-#                 temp_list_2.append(x['left'])
-#                 break
-#
+def standardise_cords(list, cord):
+    temp_list_2 = []
+    for x in list:
+        for y in range(x[cord] - 10, x[cord] + 10):
+            if y in temp_list_2:
+                cord = y
+                temp_list_2.append(x['left'])
 
-for x in split_list:
-    found = False
-    for y in range(x['left'] - 10, x['left'] + 10):
-        if y in left_points:
-            found = True
-            x['left'] = y
-            break
 
-    if not found:
-        left_points.append(x['left'])
-
-for x in split_list:
-    found = False
-    for y in range(x['top'] - 10, x['top'] + 10):
-        if y in top_points:
-            found = True
-            x['top'] = y
-            break
-
-    if not found:
-        top_points.append(x['top'])
-
+standardise_cords(split_list, 'left')
+standardise_cords(split_list, 'top')
 delegate_list = split_list[:57]
 print(delegate_list)
 replacement_list = split_list[57:]
 print(replacement_list)
-
 list_list = [delegate_list, replacement_list]
 open('output.css', 'w').close()
 
-im = Image.new('RGB', (1920, 1920), (255, 255, 255))
+im = Image.new('RGB', (SCREEN_SIZE_X, SCREEN_SIZE_Y), (255, 255, 255))
 draw = ImageDraw.Draw(im)
+
 
 def set_space(unsorted_list, width_space, height_space):
     sorted_list = sorted(unsorted_list, key=lambda i: (i['left'], i['top']))
@@ -79,31 +59,33 @@ def set_space(unsorted_list, width_space, height_space):
                 x['left'] = y['left'] + y['width'] + width_space
             if y['top'] + y['height'] - y['height'] / 5 <= x['top'] <= y['top'] + y['height'] + y['height'] * 0.8 and x['left'] == y['left']:
                 x['top'] = y['top'] + y['height'] + height_space
-        print("drawing")
-        draw.rectangle((y['left'], y['top'], y['left'] + y['width'], y['top'] + y['height']), fill=(0, 192, 192), outline=(255, 255, 255))
-        draw.text((y['left'] + 10, y['top']), str(y['id']), font=ImageFont.truetype("Montserrat-Black", 36), fill=(0,0,0))
         end_list.append(y.copy())
-        time.sleep(0.5)
-        im.save('pillow_imagedraw.jpg', quality=95)
-        im.show()
-    end_list = sorted(end_list, key=lambda i: (i['top'], i['left']))
-    for wow in end_list:
-        # draw.rectangle((wow['left'], wow['top'], wow['left'] + wow['width'], wow['top'] + wow['height']), fill=(0, 192, 192), outline=(255, 255, 255))
-        # draw.text((wow['left'] + 10, wow['top']), str(wow['id']), font=ImageFont.truetype("Montserrat-Black", 36), fill=(0,0,0))
-        with open("output.css", "a") as output:
-            output.write(
-                f"#vt{wow['id']}{{position:absolute; left:{wow['left']}px; padding-top:4px; top:{wow['top']}px; width:{wow['width']}px; height:{wow['height']}px}}\n")
+    return end_list
 
 
 open("output.css", "a").write("/*Delegates*/\n")
-set_space(delegate_list, 20, 20)
+spaced_delegate = set_space(delegate_list, 20, 20)
+end_list = sorted(spaced_delegate, key=lambda i: (i['top'], i['left']))
 open("output.css", "a").write("/*Stand ins*/\n")
-set_space(replacement_list, 20, 20)
-im.save('pillow_imagedraw.jpg', quality=95)
+spaced_replacement = set_space(replacement_list, 20, 20)
+end_list = sorted(end_list, key=lambda i: (i['top'], i['left']))
+bottom = max(spaced_replacement + spaced_delegate, key=lambda x: x['top'])
+right = max(spaced_replacement + spaced_delegate, key=lambda x: x['left'])
+top = min(spaced_replacement + spaced_delegate, key=lambda x: x['top'])
+left = min(spaced_replacement + spaced_delegate, key=lambda x: x['left'])
+move_x = round((SCREEN_SIZE_X - ((right['left'] + right['width']) - left['left'])) / 2)
+move_y = round((SCREEN_SIZE_Y - ((bottom['top'] + right['height']) - top['top'])) / 2)
+print(
+    f"bottom: {bottom['top']}\ntop: {top['top']}\nleft: {left['left']}\nright: {right['left']}\n{move_x=}\n{move_y=}\n")
 
-
-
-
-
-
-
+for wow in spaced_replacement + spaced_delegate:
+    left_2 = wow['left'] + move_x - left['left']
+    right_2 = wow['left'] + wow['width'] + move_x - left['left']
+    top_2 = wow['top'] + move_y - top['top']
+    bottom_2 = wow['top'] + wow['height'] + move_y - top['top']
+    draw.rectangle((left_2, top_2, right_2, bottom_2), fill=(0, 192, 192), outline=(255, 255, 255))
+    draw.text((left_2 + 10, top_2), str(wow['id']), font=ImageFont.truetype("Montserrat-Black", 36), fill=(0, 0, 0))
+    with open("output.css", "a") as output:
+        output.write(
+            f"#vt{wow['id']}{{position:absolute; left:{left_2}px; padding-top:4px; top:{top_2}px; width:{wow['width']}px; height:{wow['height']}px}}\n")
+    im.save('map.jpg', quality=95)
